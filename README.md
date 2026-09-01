@@ -127,6 +127,6 @@ a * 0  -> 0
 
 The project is divided into three major responsibilities:
 
-1. Lexical Analysis and Syntax Analysis
+1. Lexical Analysis and Syntax Analysis and Integration
 2. Semantic Analysis and Intermediate Code Generation
-3. Code Optimization, Target Code Generation and Integration
+3. Code Optimization, Target Code Generation
