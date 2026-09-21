@@ -1,132 +1,102 @@
-# Mini Compiler in C
+# Mini Compiler - C + Bison
 
-A simplified end-to-end compiler implemented completely in C for the Compiler Design project.
+A small end-to-end compiler implemented in C, using a handwritten C lexer and GNU Bison for LALR parsing.
 
 ## Features
-
-- Lexical Analysis
-- Syntax Analysis using Recursive Descent Parsing
-- Semantic Analysis
-- Symbol Table Management
-- Three Address Code (TAC) Generation
-- Basic Code Optimization
-- Assembly-like Target Code Generation
-
-## Supported Language Features
-
-- Integer declarations
-- Variable assignments
+- `int` declarations
+- Assignments
 - Integer constants
-- Arithmetic operators: `+`, `-`, `*`, `/`
+- `+`, `-`, `*`, `/`
 - Parentheses
+- Unary `+` and unary `-`
+- Semantic rules: declaration before use and no duplicate declaration
+- Identifier length limit: 20 characters
+- Three Address Code generation
+- Constant folding and basic algebraic simplification
+- Simple assembly-like target code
 
-Example:
+## Architecture
+Source -> C Lexer -> Bison LALR Parser -> Semantic Analysis -> TAC -> Optimization -> Target Code
 
-```c
-int a;
-int b;
-int c;
+## Files
+- `compiler.h` - shared declarations and limits
+- `lexer.c` - handwritten C lexical analyzer and Bison token interface
+- `parser.y` - Bison grammar and semantic/TAC actions
+- `semantic.c` - symbol table and semantic checks
+- `tac.c` - Three Address Code
+- `optimizer.c` - basic optimization
+- `target_codegen.c` - target-code generation
+- `main.c` - integration and hardcoded test source
+- `test_cases.txt` - test cases
+- `Makefile` - build commands
 
-a = 10;
-b = 20;
-c = a + b * 2;
-```
-
-## Compiler Architecture
-
-```text
-Source Code
-    |
-    v
-Lexical Analyzer
-    |
-    v
-Tokens
-    |
-    v
-Parser
-    |
-    v
-Semantic Analysis
-    |
-    v
-Three Address Code
-    |
-    v
-Code Optimization
-    |
-    v
-Target Code Generation
-```
-
-## Project Files
-
-- `compiler.h` - Common header file and shared definitions
-- `lexer.c` - Lexical analyzer
-- `parser.c` - Syntax analysis and parsing
-- `semantic.c` - Symbol table and semantic checks
-- `tac.c` - Three Address Code generation
-- `optimizer.c` - Basic code optimization
-- `target_codegen.c` - Assembly-like target code generation
-- `main.c` - Main driver program
-
-## Compilation
-
-Compile all files using GCC:
-
+## Install on Fedora
 ```bash
-gcc main.c lexer.c parser.c semantic.c tac.c optimizer.c target_codegen.c -o compiler
+sudo dnf install gcc bison make
+```
+
+Flex is NOT required because the lexer is handwritten in `lexer.c`.
+
+## Compile
+Option 1:
+```bash
+make
+```
+
+Option 2:
+```bash
+bison -d parser.y
+gcc -std=c11 -Wall -Wextra -pedantic parser.tab.c lexer.c semantic.c tac.c optimizer.c target_codegen.c main.c -o compiler
 ```
 
 ## Run
-
 ```bash
 ./compiler
 ```
 
-## Semantic Checks
+The current source program is inside `main.c`. Change `sourceCode` and recompile to test another program.
 
-The compiler currently detects:
+## Important Bison files
+`bison -d parser.y` generates:
+- `parser.tab.c` - generated LALR parser implementation
+- `parser.tab.h` - generated token definitions/header used by the lexer
 
-- Use of undeclared variables
-- Duplicate variable declarations
+Do not edit these generated files manually.
 
-## Example TAC
-
-Input:
-
-```c
-c = a + b * 2;
-```
-
-Output:
-
-```text
-t1 = b * 2
-t2 = a + t1
-c = t2
-```
-
-## Optimization
-
-Implemented optimizations include:
-
-- Constant Folding
-- Algebraic Simplification
-
+## Unary operators
 Examples:
-
 ```text
-5 * 2  -> 10
-a + 0  -> a
-a * 1  -> a
-a * 0  -> 0
++5
+-5
+-(a + b)
++a * -b
+```
+Unary `+` is a no-op. Unary `-` is represented internally as `0 - operand` in TAC.
+
+## Identifier length rule
+Identifiers can contain letters, digits and `_`, must start with a letter or `_`, and must be at most 20 characters long. Longer identifiers cause a lexical error.
+
+## Semantic rules
+1. A variable must be declared before it is used.
+2. A variable cannot be declared more than once.
+3. Only integer variables are supported.
+4. Identifier length cannot exceed 20 characters.
+
+## Suggested demonstration test
+Use this in `main.c`:
+```c
+const char *sourceCode =
+    "int a;"
+    "int b;"
+    "int result;"
+    "a = 10;"
+    "b = -5;"
+    "result = +(a + b * 2) - -3;";
 ```
 
-## Team
-
-The project is divided into three major responsibilities:
-
-1. Lexical Analysis and Syntax Analysis and Integration
-2. Semantic Analysis and Intermediate Code Generation
-3. Code Optimization, Target Code Generation
+Expected key behavior:
+- unary `-5` is accepted
+- unary `+` is accepted
+- `b * 2` is evaluated before `a + ...`
+- `- -3` is accepted
+- parsing and semantic analysis finish successfully
