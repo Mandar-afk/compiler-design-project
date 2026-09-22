@@ -1,45 +1,73 @@
 #include "compiler.h"
 
-extern char tac[MAX_TAC][100];
-extern int tacCount;
-
-int isNumber(const char *s) {
-    for(int i=0;s[i]!='\0';i++)
-        if(!isdigit(s[i])) return 0;
+static int isNumber(const char *s) {
+    if (!s || *s == '\0') return 0;
+    for (const char *p = s; *p; p++) {
+        if (*p < '0' || *p > '9') return 0;
+    }
     return 1;
 }
 
-void optimizeTAC() {
-    printf("\n===== OPTIMIZATION =====\n");
+static int calculate(int a, const char *op, int b, int *ok) {
+    *ok = 1;
+    if (strcmp(op, "+") == 0) return a + b;
+    if (strcmp(op, "-") == 0) return a - b;
+    if (strcmp(op, "*") == 0) return a * b;
+    if (strcmp(op, "/") == 0) {
+        if (b == 0) {
+            *ok = 0;
+            return 0;
+        }
+        return a / b;
+    }
+    *ok = 0;
+    return 0;
+}
 
-    for(int i=0;i<tacCount;i++) {
-        char result[50],left[50],right[50],op;
-        int matched=sscanf(tac[i],"%s = %s %c %s",
-                           result,left,&op,right);
+void optimizeTAC(void) {
+    printf("\nOPTIMIZED TAC\n");
+    printf("------------------------\n");
 
-        if(matched==4) {
-            if(isNumber(left)&&isNumber(right)) {
-                int a=atoi(left),b=atoi(right),value=0;
-                switch(op) {
-                    case '+':value=a+b;break;
-                    case '-':value=a-b;break;
-                    case '*':value=a*b;break;
-                    case '/':if(b!=0)value=a/b;else continue;
+    for (int i = 0; i < getTacCount(); i++) {
+        const char *line = getTacLine(i);
+        char result[32], left[32], op[8], right[32];
+
+        if (sscanf(line, "%31s = %31s %7s %31s", result, left, op, right) == 4) {
+            /* Constant folding */
+            if (isNumber(left) && isNumber(right)) {
+                int a = atoi(left), b = atoi(right), ok;
+                int value = calculate(a, op, b, &ok);
+                if (ok) {
+                    char optimized[MAX_TAC_LINE];
+                    snprintf(optimized, sizeof(optimized), "%s = %d", result, value);
+                    setTacLine(i, optimized);
                 }
-                sprintf(tac[i],"%s = %d",result,value);
-                continue;
             }
 
-            if(op=='+'&&strcmp(right,"0")==0)
-                sprintf(tac[i],"%s = %s",result,left);
-            else if(op=='*'&&strcmp(right,"1")==0)
-                sprintf(tac[i],"%s = %s",result,left);
-            else if(op=='*'&&strcmp(right,"0")==0)
-                sprintf(tac[i],"%s = 0",result);
+            /* Algebraic simplification */
+            if (strcmp(op, "+") == 0 && strcmp(right, "0") == 0) {
+                char optimized[MAX_TAC_LINE];
+                snprintf(optimized, sizeof(optimized), "%s = %s", result, left);
+                setTacLine(i, optimized);
+            } else if (strcmp(op, "+") == 0 && strcmp(left, "0") == 0) {
+                char optimized[MAX_TAC_LINE];
+                snprintf(optimized, sizeof(optimized), "%s = %s", result, right);
+                setTacLine(i, optimized);
+            } else if (strcmp(op, "-") == 0 && strcmp(right, "0") == 0) {
+                char optimized[MAX_TAC_LINE];
+                snprintf(optimized, sizeof(optimized), "%s = %s", result, left);
+                setTacLine(i, optimized);
+            } else if (strcmp(op, "*") == 0 && strcmp(right, "1") == 0) {
+                char optimized[MAX_TAC_LINE];
+                snprintf(optimized, sizeof(optimized), "%s = %s", result, left);
+                setTacLine(i, optimized);
+            } else if (strcmp(op, "*") == 0 && strcmp(left, "1") == 0) {
+                char optimized[MAX_TAC_LINE];
+                snprintf(optimized, sizeof(optimized), "%s = %s", result, right);
+                setTacLine(i, optimized);
+            }
         }
-    }
 
-    printf("Optimization completed.\n");
-    printf("\n===== OPTIMIZED TAC =====\n");
-    for(int i=0;i<tacCount;i++) printf("%s\n",tac[i]);
+        printf("%s\n", getTacLine(i));
+    }
 }
