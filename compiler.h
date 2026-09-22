@@ -4,60 +4,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
-#define MAX_TOKENS 500
-#define MAX_LEXEME 50
+#define MAX_IDENTIFIER_LENGTH 20
 #define MAX_SYMBOLS 100
 #define MAX_TAC 200
+#define MAX_TAC_LINE 120
+#define MAX_SOURCE_LENGTH 5000
 
-typedef enum {
-    TOKEN_INT,
-    TOKEN_ID,
-    TOKEN_NUMBER,
-    TOKEN_ASSIGN,
-    TOKEN_PLUS,
-    TOKEN_MINUS,
-    TOKEN_MUL,
-    TOKEN_DIV,
-    TOKEN_LPAREN,
-    TOKEN_RPAREN,
-    TOKEN_SEMICOLON,
-    TOKEN_EOF,
-    TOKEN_INVALID
-} TokenType;
-
-typedef struct {
-    TokenType type;
-    char lexeme[MAX_LEXEME];
-} Token;
-
-/* Lexer */
-extern Token tokens[MAX_TOKENS];
-extern int tokenCount;
-
-void lexicalAnalysis(const char *source);
-void printTokens();
-
-/* Parser */
-void parseProgram();
-
-/* Semantic Analyzer */
-void resetSymbolTable();
+/* Semantic analysis */
+void resetSymbolTable(void);
 int declareVariable(const char *name);
 int isDeclared(const char *name);
-void printSymbolTable();
+void printSymbolTable(void);
+int hasSemanticError(void);
+void setSemanticError(void);
 
-/* TAC */
-void resetTAC();
-void generateTAC(const char *result, const char *left, char op, const char *right);
-void generateAssignment(const char *result, const char *value);
-void printTAC();
+/* Three Address Code */
+void resetTAC(void);
+char *generateTAC(const char *left, const char *op, const char *right);
+void generateAssignment(const char *name, const char *value);
+void printTAC(void);
+int getTacCount(void);
+const char *getTacLine(int index);
+void setTacLine(int index, const char *line);
 
-/* Optimizer */
-void optimizeTAC();
+/* Optimization and target code */
+void optimizeTAC(void);
+void generateTargetCode(void);
 
-/* Target Code */
-void generateTargetCode();
+/* Lexer input */
+void setSource(const char *source);
 
 #endif
