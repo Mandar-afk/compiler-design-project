@@ -1,32 +1,22 @@
 #include "compiler.h"
 
-extern char tac[MAX_TAC][100];
-extern int tacCount;
+void generateTargetCode(void) {
+    printf("\nTARGET CODE\n");
+    printf("------------------------\n");
 
-void generateTargetCode() {
-    printf("\n===== TARGET CODE =====\n");
+    for (int i = 0; i < getTacCount(); i++) {
+        const char *line = getTacLine(i);
+        char result[32], left[32], op[8], right[32];
 
-    for(int i=0;i<tacCount;i++) {
-        char result[50],left[50],right[50],op;
-        int matched=sscanf(tac[i],"%s = %s %c %s",
-                           result,left,&op,right);
-
-        if(matched==4) {
-            printf("LOAD R1, %s\n",left);
-            switch(op) {
-                case '+':printf("ADD R1, %s\n",right);break;
-                case '-':printf("SUB R1, %s\n",right);break;
-                case '*':printf("MUL R1, %s\n",right);break;
-                case '/':printf("DIV R1, %s\n",right);break;
-            }
-            printf("STORE %s, R1\n",result);
-        }
-        else {
-            char value[50];
-            if(sscanf(tac[i],"%s = %s",result,value)==2) {
-                printf("MOV R1, %s\n",value);
-                printf("STORE %s, R1\n",result);
-            }
+        if (sscanf(line, "%31s = %31s %7s %31s", result, left, op, right) == 4) {
+            printf("LOAD R0, %s\n", left);
+            if (strcmp(op, "+") == 0) printf("ADD R0, %s\n", right);
+            else if (strcmp(op, "-") == 0) printf("SUB R0, %s\n", right);
+            else if (strcmp(op, "*") == 0) printf("MUL R0, %s\n", right);
+            else if (strcmp(op, "/") == 0) printf("DIV R0, %s\n", right);
+            printf("STORE %s, R0\n", result);
+        } else if (sscanf(line, "%31s = %31s", result, left) == 2) {
+            printf("MOV %s, %s\n", result, left);
         }
     }
 }
