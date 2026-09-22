@@ -1,133 +1,79 @@
 #include "compiler.h"
+#include "parser.tab.h"
+#include <ctype.h>
 
-Token tokens[MAX_TOKENS];
-int tokenCount = 0;
+static const char *source = NULL;
+static size_t pos = 0;
 
-void addToken(TokenType type, const char *lexeme) {
-    tokens[tokenCount].type = type;
-    strcpy(tokens[tokenCount].lexeme, lexeme);
-    tokenCount++;
+void setSource(const char *src) {
+    source = src;
+    pos = 0;
 }
 
-void lexicalAnalysis(const char *source) {
-
-    tokenCount = 0;
-    int i = 0;
-
-    while (source[i] != '\0') {
-
-        if (isspace(source[i])) {
-            i++;
-            continue;
-        }
-
-        if (isalpha(source[i]) || source[i] == '_') {
-
-            char word[MAX_LEXEME];
-            int j = 0;
-
-            while (isalnum(source[i]) || source[i] == '_') {
-                word[j++] = source[i++];
-            }
-
-            word[j] = '\0';
-
-            if (strcmp(word, "int") == 0)
-                addToken(TOKEN_INT, word);
-            else
-                addToken(TOKEN_ID, word);
-
-            continue;
-        }
-
-        if (isdigit(source[i])) {
-
-            char number[MAX_LEXEME];
-            int j = 0;
-
-            while (isdigit(source[i])) {
-                number[j++] = source[i++];
-            }
-
-            number[j] = '\0';
-
-            addToken(TOKEN_NUMBER, number);
-            continue;
-        }
-
-        char temp[2] = {source[i], '\0'};
-
-        switch (source[i]) {
-
-            case '=':
-                addToken(TOKEN_ASSIGN, temp);
-                break;
-
-            case '+':
-                addToken(TOKEN_PLUS, temp);
-                break;
-
-            case '-':
-                addToken(TOKEN_MINUS, temp);
-                break;
-
-            case '*':
-                addToken(TOKEN_MUL, temp);
-                break;
-
-            case '/':
-                addToken(TOKEN_DIV, temp);
-                break;
-
-            case '(':
-                addToken(TOKEN_LPAREN, temp);
-                break;
-
-            case ')':
-                addToken(TOKEN_RPAREN, temp);
-                break;
-
-            case ';':
-                addToken(TOKEN_SEMICOLON, temp);
-                break;
-
-            default:
-                addToken(TOKEN_INVALID, temp);
-        }
-
-        i++;
-    }
-
-    addToken(TOKEN_EOF, "EOF");
-}
-
-const char* tokenName(TokenType type) {
-
-    switch (type) {
-
-        case TOKEN_INT: return "INT";
-        case TOKEN_ID: return "ID";
-        case TOKEN_NUMBER: return "NUMBER";
-        case TOKEN_ASSIGN: return "ASSIGN";
-        case TOKEN_PLUS: return "PLUS";
-        case TOKEN_MINUS: return "MINUS";
-        case TOKEN_MUL: return "MUL";
-        case TOKEN_DIV: return "DIV";
-        case TOKEN_LPAREN: return "LPAREN";
-        case TOKEN_RPAREN: return "RPAREN";
-        case TOKEN_SEMICOLON: return "SEMICOLON";
-        case TOKEN_EOF: return "EOF";
-        default: return "INVALID";
+static void skipWhitespace(void) {
+    while (source && isspace((unsigned char)source[pos])) {
+        pos++;
     }
 }
 
-void printTokens() {
+int yylex(void) {
+    char buffer[256];
+    size_t len = 0;
 
-    printf("\n===== TOKENS =====\n");
+    if (!source) return 0;
+    skipWhitespace();
 
-    for (int i = 0; i < tokenCount; i++) {
-        printf("%-12s : %s\n",
-               tokenName(tokens[i].type),
-               tokens[i].lexeme);
+    if (source[pos] == '\0') return 0;
+
+    /* Identifier / keyword */
+    if (isalpha((unsigned char)source[pos]) || source[pos] == '_') {
+        while (isalnum((unsigned char)source[pos]) || source[pos] == '_') {
+            if (len < sizeof(buffer) - 1) buffer[len++] = source[pos];
+            pos++;
+        }
+        buffer[len] = '\0';
+
+        if (strcmp(buffer, "int") == 0) return INT;
+
+        if (len > MAX_IDENTIFIER_LENGTH) {
+            fprintf(stderr,
+                    "Lexical Error: identifier '%s' exceeds maximum length of %d characters.\n",
+                    buffer, MAX_IDENTIFIER_LENGTH);
+            return INVALID;
+        }
+
+        yylval.str = malloc(len + 1);
+        if (!yylval.str) {
+            fprintf(stderr, "Fatal Error: memory allocation failed.\n");
+            exit(EXIT_FAILURE);
+        }
+        memcpy(yylval.str, buffer, len + 1);
+        return ID;
+    }
+
+    /* Integer constant */
+    if (isdigit((unsigned char)source[pos])) {
+        while (isdigit((unsigned char)source[pos])) {
+            if (len < sizeof(buffer) - 1) buffer[len++] = source[pos];
+            pos++;
+        }
+        buffer[len] = '\0';
+        yylval.num = atoi(buffer);
+        return NUMBER;
+    }
+
+    switch (source[pos]) {
+        case '=': pos++; return ASSIGN;
+        case '+': pos++; return PLUS;
+        case '-': pos++; return MINUS;
+        case '*': pos++; return TIMES;
+        case '/': pos++; return DIVIDE;
+        case '(': pos++; return LPAREN;
+        case ')': pos++; return RPAREN;
+        case ';': pos++; return SEMICOLON;
+        default:
+            fprintf(stderr, "Lexical Error: invalid character '%c'.\n", source[pos]);
+            pos++;
+            return INVALID;
     }
 }
